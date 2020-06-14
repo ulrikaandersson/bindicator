@@ -7,10 +7,19 @@
 // Library for WiFi
 #include "ESP8266WiFi.h"
 
+// Time module
+#include <time.h>
+#include "timezone.h"
+const char *TIME_SERVER = "pool.ntp.org";
+int myTimeZone = UTC; // change this to your time zone (see in timezone.h)
+
+time_t now;
+
 #define PIN        D8
 #define NUMPIXELS 12
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 #define DELAYVAL 500
+
 
 // Define some standard colours for easier reference later
 const uint32_t redPixel = pixels.Color(255, 0, 0);
@@ -49,6 +58,17 @@ void setup() {
   Serial.println("WiFi connected");
   // Print the IP address
   Serial.println(WiFi.localIP());
+
+  // setup time
+  configTime(myTimeZone, 0, TIME_SERVER);
+  Serial.println("\nWaiting for time");
+  while (now < EPOCH_1_1_2019)
+  {
+    now = time(nullptr);
+    delay(500);
+    Serial.print("*");
+  }
+  Serial.print("\n");
 }
 
 void loop() {
@@ -56,7 +76,47 @@ void loop() {
   // blinking(set_green_and_blue);
   // blink thrice
   blink_x_times(2);
-  delay(20*DELAYVAL);
+  delay(10*DELAYVAL);
+  retrieve_time();
+}
+
+
+void retrieve_time() {
+  struct tm *timeinfo;
+
+  time(&now);
+  timeinfo = localtime(&now);
+
+  int year = timeinfo->tm_year + 1900;
+  int month = timeinfo->tm_mon;
+  int day = timeinfo->tm_mday;
+  int hour = timeinfo->tm_hour;
+  int mins = timeinfo->tm_min;
+  int sec = timeinfo->tm_sec;
+  int day_of_week = timeinfo->tm_wday;
+
+  Serial.println("Date = " + toStringAddZero(day) + "/" + toStringAddZero(month) + "/" + String(year));
+  Serial.println("Time = " + toStringAddZero(hour) + ":" + toStringAddZero(mins) + ":" + toStringAddZero(sec));
+  Serial.print("Day is " + String(DAYS_OF_WEEK[day_of_week]));
+  Serial.println(" or " + String(DAYS_OF_WEEK_3[day_of_week]));
+  }
+
+// toStringAddZero()
+// this function adds a zero to a date string if its a single digit
+// for example if data = 1, then the function will return 01
+// this makes the date and time string's consistant size for display
+String toStringAddZero(int data)
+{
+  String st = "";
+  if (data < 10)
+  {
+    st = "0" + String(data);
+  }
+  else
+  {
+    st = String(data);
+  }
+  return st;
 }
 
 void turn_off() {
