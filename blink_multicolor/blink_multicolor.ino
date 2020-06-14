@@ -1,7 +1,12 @@
+// Library for LED pixels
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
   #include <avr/power.h>
 #endif
+
+// Library for WiFi
+#include "ESP8266WiFi.h"
+
 #define PIN        D8
 #define NUMPIXELS 12
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
@@ -15,13 +20,35 @@ const uint32_t whitePixel = pixels.Color(255, 255, 255);
 const uint32_t unlitPixel = pixels.Color(0, 0, 0);
 const uint32_t dimWhitePixel = pixels.Color(255, 255, 255);
 
+// WiFi parameters to be configured
+const char* ssid = "YOUR WIFI NETWORK NAME";n
+const char* password = "YOUR WIFI PASSWARD";
+
 
 void setup() {
 #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
   clock_prescale_set(clock_div_1);
 #endif
-
+  
+  // Set up neopixel LEDs
   pixels.begin();
+
+  // Set up WiFi
+  Serial.begin(9600);
+  // Connect to WiFi
+  WiFi.begin(ssid, password);
+
+  // while wifi not connected yet, print '.'
+  // then after it connected, get out of the loop
+  while (WiFi.status() != WL_CONNECTED) {
+     delay(500);
+     Serial.print(".");
+  }
+  //print a new line, then print WiFi connected and the IP address
+  Serial.println("");
+  Serial.println("WiFi connected");
+  // Print the IP address
+  Serial.println(WiFi.localIP());
 }
 
 void loop() {
