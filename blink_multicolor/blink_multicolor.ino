@@ -7,6 +7,14 @@
 Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 #define DELAYVAL 500
 
+// Define some standard colours for easier reference later
+const uint32_t redPixel = pixels.Color(255, 0, 0);
+const uint32_t greenPixel = pixels.Color(0, 255, 0);
+const uint32_t bluePixel = pixels.Color(0, 0, 255);
+const uint32_t whitePixel = pixels.Color(255, 255, 255);
+const uint32_t unlitPixel = pixels.Color(0, 0, 0);
+const uint32_t dimWhitePixel = pixels.Color(255, 255, 255);
+
 
 void setup() {
 #if defined(__AVR_ATtiny85__) && (F_CPU == 16000000)
@@ -56,16 +64,24 @@ void blink_x_times(int a) {
 void set_green_and_blue() {
   for(int i=0; i<NUMPIXELS; i++) {
     if(tophalf(i)) {
-      pixels.setPixelColor(i, pixels.Color(0, 150, 0));
+      pixels.setPixelColor(i, greenPixel);
       } else {
-        pixels.setPixelColor(i, pixels.Color(0, 0, 150));
+        pixels.setPixelColor(i, bluePixel);
       }
   }
   }
 
 void set_red() {
+  set_colour(redPixel);
+  }
+
+void set_blue() {
+  set_colour(bluePixel);
+  }
+
+void set_colour(uint32_t colourPixel) {
   for(int i=0; i<NUMPIXELS; i++) {
-    pixels.setPixelColor(i, pixels.Color(150, 0, 0));
+    pixels.setPixelColor(i, colourPixel);
   }
   }
 
