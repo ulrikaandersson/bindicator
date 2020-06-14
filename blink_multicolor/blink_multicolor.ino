@@ -21,8 +21,8 @@ const uint32_t unlitPixel = pixels.Color(0, 0, 0);
 const uint32_t dimWhitePixel = pixels.Color(255, 255, 255);
 
 // WiFi parameters to be configured
-const char* ssid = "YOUR WIFI NETWORK NAME";n
-const char* password = "YOUR WIFI PASSWARD";
+const char* ssid = "VM3146024";
+const char* password = "wcs8bgqxTjmv";
 
 
 void setup() {
