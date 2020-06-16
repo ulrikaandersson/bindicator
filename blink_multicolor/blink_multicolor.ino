@@ -14,6 +14,13 @@ const char *TIME_SERVER = "pool.ntp.org";
 int myTimeZone = 0; // change this to your time zone (see in timezone.h)
 const int daylightOffset_sec = -3600;  // daylight savings
 
+// parameters for time check
+const int delay_between_time_checks = 1000;       // milliseconds
+const int scheduled_time_to_check_bin_collection = 17;      // 5pm
+int last_date_bin_collections_were_checked = 0;   // Today or yesterday
+
+
+
 time_t now;
 
 #define PIN        D8
@@ -77,7 +84,7 @@ void loop() {
   // blinking(set_green_and_blue);
   // blink thrice
   blink_x_times(2);
-  delay(10*DELAYVAL);
+  delay(delay_between_time_checks);
   retrieve_time();
 }
 
@@ -100,6 +107,23 @@ void retrieve_time() {
   Serial.println("Time = " + toStringAddZero(hour) + ":" + toStringAddZero(mins) + ":" + toStringAddZero(sec));
   Serial.print("Day is " + String(DAYS_OF_WEEK[day_of_week]));
   Serial.println(" or " + String(DAYS_OF_WEEK_3[day_of_week]));
+  
+  bool check_council_time = check_alert(scheduled_time_to_check_bin_collection, last_date_bin_collections_were_checked, mins, sec);
+  
+  if (check_council_time) {
+    Serial.println("check bins with council now");
+    last_date_bin_collections_were_checked = mins;
+    }
+  
+  }
+
+bool check_alert(int time_to_check, int last_time_of_check, int current_day, int current_hour) {
+  bool time_to_alert = false;
+  if ((last_time_of_check != current_day) and (current_hour >= time_to_check)) {
+    Serial.println("Check Now! in function");
+    time_to_alert = true;
+    }
+  return time_to_alert;
   }
 
 // toStringAddZero()
