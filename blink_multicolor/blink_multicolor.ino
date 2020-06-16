@@ -11,7 +11,8 @@
 #include <time.h>
 #include "timezone.h"
 const char *TIME_SERVER = "pool.ntp.org";
-int myTimeZone = UTC; // change this to your time zone (see in timezone.h)
+int myTimeZone = 0; // change this to your time zone (see in timezone.h)
+const int daylightOffset_sec = -3600;  // daylight savings
 
 time_t now;
 
@@ -60,7 +61,7 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   // setup time
-  configTime(myTimeZone, 0, TIME_SERVER);
+  configTime(myTimeZone, daylightOffset_sec, TIME_SERVER);
   Serial.println("\nWaiting for time");
   while (now < EPOCH_1_1_2019)
   {
@@ -88,7 +89,7 @@ void retrieve_time() {
   timeinfo = localtime(&now);
 
   int year = timeinfo->tm_year + 1900;
-  int month = timeinfo->tm_mon;
+  int month = timeinfo->tm_mon + 1;
   int day = timeinfo->tm_mday;
   int hour = timeinfo->tm_hour;
   int mins = timeinfo->tm_min;
