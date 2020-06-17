@@ -17,9 +17,11 @@ const int daylightOffset_sec = -3600;  // daylight savings
 // parameters for time check
 const int delay_between_time_checks = 1000;       // milliseconds
 const int scheduled_time_to_check_bin_collection = 17;      // 5pm
+const int max_time_to_blink_for = 10;                       // hours to blink for
 int last_date_bin_collections_were_checked = 0;   // Today or yesterday
 
-
+// button input
+const int buttonPin = 4;
 
 time_t now;
 
@@ -77,6 +79,9 @@ void setup() {
     Serial.print("*");
   }
   Serial.print("\n");
+
+  // setup button input
+  pinMode(buttonPin, INPUT);
 }
 
 void loop() {
@@ -112,6 +117,7 @@ void retrieve_time() {
   
   if (check_council_time) {
     Serial.println("check bins with council now");
+    alert_function();
     last_date_bin_collections_were_checked = mins;
     }
   
@@ -120,10 +126,19 @@ void retrieve_time() {
 bool check_alert(int time_to_check, int last_time_of_check, int current_day, int current_hour) {
   bool time_to_alert = false;
   if ((last_time_of_check != current_day) and (current_hour >= time_to_check)) {
-    Serial.println("Check Now! in function");
+    // Serial.println("Check Now! in function");
     time_to_alert = true;
     }
   return time_to_alert;
+  }
+
+void alert_function() {
+  bool button_pressed = 0;
+  while (button_pressed == 0) {
+    // blink
+    blinking(set_green_and_blue);
+    button_pressed = digitalRead(buttonPin);  // set to 0 when pressed
+    }
   }
 
 // toStringAddZero()

@@ -1,4 +1,4 @@
-const int buttonPin = 2;     // the number of the pushbutton pin
+const int buttonPin = 4;     // the number of the pushbutton pin
 const int ledPin =  LED_BUILTIN;  // 13;      // the number of the LED pin
 
 // variables will change:
