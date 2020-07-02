@@ -53,7 +53,7 @@ const uint32_t bluePixel = pixels.Color(0, 0, 255);
 const uint32_t yellowPixel = pixels.Color(247, 214, 0);
 const uint32_t whitePixel = pixels.Color(255, 255, 255);
 const uint32_t unlitPixel = pixels.Color(0, 0, 0);
-const uint32_t dimWhitePixel = pixels.Color(255, 255, 255);
+const uint32_t dimWhitePixel = pixels.Color(155, 155, 155);
 
 // WiFi parameters to be configured
 const char* ssid = "VM3146024";
@@ -249,7 +249,7 @@ void read_from_council_website(String tomorrow_date) {
     
     JsonArray collections = doc["collections"];
     
-    JsonObject collections_0 = collections[1];
+    JsonObject collections_0 = collections[0];
     const char* collection_date_char = collections[0]["date"];
     char collection_date[11] = "";
     strncpy(collection_date, collection_date_char, 10);
@@ -301,11 +301,14 @@ void read_from_council_website(String tomorrow_date) {
 
 uint32_t get_colour_from_string(const char* bin_type) {
   uint32_t c;
-  if (bin_type == "RECYCLE") {
+  if (strcmp(bin_type, "RECYCLE") == 0) {
+            Serial.println("setting blue");
             c = bluePixel;}
-  if (bin_type == "DOMESTIC") {
+  if (strcmp(bin_type, "DOMESTIC") == 0) {
+    Serial.println("setting yellow");
             c = yellowPixel;}
-  if (bin_type == "ORGANIC") {
+  if (strcmp(bin_type, "ORGANIC") == 0) {
+    Serial.println("setting green");
             c = greenPixel;}
   return c;
   }
@@ -356,12 +359,14 @@ void solid_color(void (*func)()) {
   }
 
 void blink_x_times(int a) {
+  uint32_t red = redPixel;
+  uint32_t red2 = greenPixel;
   for(int i=0; i<a; i++) {
-    blinking(redPixel, redPixel);
+    blinking(red, red2);
   }
   }
 
-void set_half_and_half(const uint32_t colour_1, const uint32_t colour_2) {
+void set_half_and_half(uint32_t colour_1, uint32_t colour_2) {
   for(int i=0; i<NUMPIXELS; i++) {
     if(tophalf(i)) {
       pixels.setPixelColor(i, colour_1);
