@@ -16,14 +16,15 @@ const int daylightOffset_sec = -3600;  // daylight savings
 
 // parameters for time check
 const int delay_between_time_checks = 1000;       // milliseconds
-const int scheduled_time_to_check_bin_collection = 17;      // 5pm
+const int scheduled_check_time = 17;      // 5pm
 const int max_time_to_blink_for = 10;                       // hours to blink for
-int last_date_bin_collections_were_checked = 0;   // Today or yesterday
+String last_date_of_check = "";   // Today or yesterday
 
 // button input
 const int buttonPin = 4;
 
 time_t now;
+time_t tomorrow;
 
 #define PIN        D8
 #define NUMPIXELS 12
@@ -75,6 +76,7 @@ void setup() {
   while (now < EPOCH_1_1_2019)
   {
     now = time(nullptr);
+    tomorrow = time(nullptr);
     delay(500);
     Serial.print("*");
   }
@@ -94,38 +96,65 @@ void loop() {
 }
 
 
+String get_date_string(tm *t_info) {
+  int year = t_info->tm_year + 1900;
+  int month = t_info->tm_mon + 1;
+  int day = t_info->tm_mday;
+  String date_string = String(year) + "-" + toStringAddZero(month) + "-" + toStringAddZero(day);
+  
+  // int day_of_week = timeinfo->tm_wday;
+  // Serial.print("Day is " + String(DAYS_OF_WEEK[day_of_week]));
+  // Serial.println(" or " + String(DAYS_OF_WEEK_3[day_of_week]));
+  return date_string;
+  }
+  
+  String get_time_string(tm *t_info) {
+  int year = t_info->tm_year + 1900;
+  int hour = t_info->tm_hour;
+  int mins = t_info->tm_min;
+  int sec = t_info->tm_sec;
+  String time_string = toStringAddZero(hour) + ":" + toStringAddZero(mins) + ":" + toStringAddZero(sec);
+  return time_string;
+  }
+
+void print_date_and_time(String today_d, String today_t, String tom_d) {
+  Serial.print("Today's date: ");
+  Serial.println(today_d);
+  Serial.print("Today's time: ");
+  Serial.println(today_t);
+  
+  Serial.print("Tomorrow's date: ");
+  Serial.println(tom_d);
+  }
+
 void retrieve_time() {
   struct tm *timeinfo;
-
+  struct tm *timeinfo_tomorrow;
+  
   time(&now);
   timeinfo = localtime(&now);
-
-  int year = timeinfo->tm_year + 1900;
-  int month = timeinfo->tm_mon + 1;
-  int day = timeinfo->tm_mday;
-  int hour = timeinfo->tm_hour;
-  int mins = timeinfo->tm_min;
-  int sec = timeinfo->tm_sec;
-  int day_of_week = timeinfo->tm_wday;
-
-  Serial.println("Date = " + toStringAddZero(day) + "/" + toStringAddZero(month) + "/" + String(year));
-  Serial.println("Time = " + toStringAddZero(hour) + ":" + toStringAddZero(mins) + ":" + toStringAddZero(sec));
-  Serial.print("Day is " + String(DAYS_OF_WEEK[day_of_week]));
-  Serial.println(" or " + String(DAYS_OF_WEEK_3[day_of_week]));
+  String today_date = get_date_string(timeinfo);
+  String today_time = get_time_string(timeinfo);
+  int current_hour = timeinfo->tm_hour;
+  tomorrow = now + 86400;       // add 24 x 60 x 60s
+  timeinfo_tomorrow = localtime(&tomorrow);
+  String tomorrow_date = get_date_string(timeinfo_tomorrow);
   
-  bool check_council_time = check_alert(scheduled_time_to_check_bin_collection, last_date_bin_collections_were_checked, mins, sec);
+  print_date_and_time(today_date, today_time, tomorrow_date);
+  
+  bool check_council_time = check_alert(scheduled_check_time, last_date_of_check, today_date, current_hour);
   
   if (check_council_time) {
     Serial.println("check bins with council now");
     alert_function();
-    last_date_bin_collections_were_checked = mins;
+    last_date_of_check = get_date_string(timeinfo);
     }
-  
   }
 
-bool check_alert(int time_to_check, int last_time_of_check, int current_day, int current_hour) {
+bool check_alert(int time_to_check, String last_check_date, String t_date, int hour) {
   bool time_to_alert = false;
-  if ((last_time_of_check != current_day) and (current_hour >= time_to_check)) {
+  Serial.println("date in func: " + t_date);
+  if ((last_check_date != t_date) and (hour >= time_to_check)) {
     // Serial.println("Check Now! in function");
     time_to_alert = true;
     }
