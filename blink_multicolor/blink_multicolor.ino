@@ -7,6 +7,20 @@
 // Library for WiFi
 #include "ESP8266WiFi.h"
 
+// web reading
+#include <WiFiClientSecure.h> 
+#include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+#include <ArduinoJson.h>
+
+const char *host = "servicelayer3c.azure-api.net";
+const int httpsPort = 443;  //HTTPS= 443 and HTTP = 80
+
+//SHA1 finger print of certificate use web browser to view and copy
+const char fingerprint[] PROGMEM = "53 04 CC A4 A4 55 1E 0A 05 C2 6B 97 2C D3 08 A5 DF 33 78 2C";
+// "65 10 73 1D 4A 19 D9 4C 39 DD AF DE F9 3A 7D 15 20 E6 52 0D";
+
+
 // Time module
 #include <time.h>
 #include "timezone.h"
@@ -36,6 +50,7 @@ Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 const uint32_t redPixel = pixels.Color(255, 0, 0);
 const uint32_t greenPixel = pixels.Color(0, 255, 0);
 const uint32_t bluePixel = pixels.Color(0, 0, 255);
+const uint32_t yellowPixel = pixels.Color(247, 214, 0);
 const uint32_t whitePixel = pixels.Color(255, 255, 255);
 const uint32_t unlitPixel = pixels.Color(0, 0, 0);
 const uint32_t dimWhitePixel = pixels.Color(255, 255, 255);
@@ -55,18 +70,23 @@ void setup() {
 
   // Set up WiFi
   Serial.begin(9600);
+  WiFi.mode(WIFI_OFF);        //Prevents reconnection issue (taking too long to connect)
+  delay(1000);
+  WiFi.mode(WIFI_STA);
   // Connect to WiFi
   WiFi.begin(ssid, password);
 
   // while wifi not connected yet, print '.'
   // then after it connected, get out of the loop
+  Serial.print("Connecting");
   while (WiFi.status() != WL_CONNECTED) {
      delay(500);
      Serial.print(".");
   }
   //print a new line, then print WiFi connected and the IP address
   Serial.println("");
-  Serial.println("WiFi connected");
+  Serial.print("Connected to ");
+  Serial.println(ssid);
   // Print the IP address
   Serial.println(WiFi.localIP());
 
@@ -135,7 +155,7 @@ void retrieve_time() {
   timeinfo = localtime(&now);
   String today_date = get_date_string(timeinfo);
   String today_time = get_time_string(timeinfo);
-  int current_hour = timeinfo->tm_hour;
+  int current_hour = timeinfo->tm_sec;
   tomorrow = now + 86400;       // add 24 x 60 x 60s
   timeinfo_tomorrow = localtime(&tomorrow);
   String tomorrow_date = get_date_string(timeinfo_tomorrow);
@@ -146,8 +166,9 @@ void retrieve_time() {
   
   if (check_council_time) {
     Serial.println("check bins with council now");
-    alert_function();
+    alert_function(tomorrow_date);
     last_date_of_check = get_date_string(timeinfo);
+    Serial.println("always set to tomorrow for testing");
     }
   }
 
@@ -161,14 +182,136 @@ bool check_alert(int time_to_check, String last_check_date, String t_date, int h
   return time_to_alert;
   }
 
-void alert_function() {
+void alert_function(String tom_date) {
+  
+  read_from_council_website(tom_date);
+  }
+
+void read_from_council_website(String tomorrow_date) {
   bool button_pressed = 0;
-  while (button_pressed == 0) {
-    // blink
-    blinking(set_green_and_blue);
-    button_pressed = digitalRead(buttonPin);  // set to 0 when pressed
+  WiFiClientSecure httpsClient;    //Declare object of class WiFiClient
+ 
+  Serial.println(host);
+ 
+  Serial.printf("Using fingerprint '%s'\n", fingerprint);
+  httpsClient.setFingerprint(fingerprint);
+  httpsClient.setTimeout(15000); // 15 Seconds
+  delay(1000);
+  
+  Serial.print("HTTPS Connecting");
+  int r=0; //retry counter
+  while((!httpsClient.connect(host, httpsPort)) && (r < 30)){
+      delay(100);
+      Serial.print(".");
+      r++;
+  }
+  if(r==30) {
+    Serial.println("Connection failed");
+  }
+  else {
+    Serial.println("Connected to web");
+  }
+  
+  String getData, Link;
+ 
+  //GET Data
+  Link = "/wastecalendar/collection/search/200004185513/?numberOfCollections=12&fbclid=IwAR04JcYs5eiVkD-gK3EsKZg3G8qzMxp6_Mb6SJAxBadeTP9CdE8aTyz5UyY";
+ 
+  Serial.print("requesting URL: ");
+  Serial.println(host+Link);
+ 
+  httpsClient.print(String("GET ") + Link + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" +               
+               "Connection: close\r\n\r\n");
+ 
+  Serial.println("request sent");
+                  
+  while (httpsClient.connected()) {
+    String line = httpsClient.readStringUntil('\n');
+    if (line == "\r") {
+      Serial.println("headers received");
+      break;
     }
   }
+ 
+  Serial.println("reply was:");
+  Serial.println("==========");
+  String line;
+  while(httpsClient.available()){        
+    line = httpsClient.readStringUntil('\n');  //Read Line by Line
+    Serial.println("Starting to parse:");
+    
+    size_t capacity = 9*JSON_ARRAY_SIZE(1) + 3*JSON_ARRAY_SIZE(2) + JSON_ARRAY_SIZE(3) + JSON_ARRAY_SIZE(12) + JSON_OBJECT_SIZE(2) + 12*JSON_OBJECT_SIZE(3) + 930;
+    DynamicJsonDocument doc(capacity);
+    
+    
+    deserializeJson(doc, line);
+    
+    JsonArray collections = doc["collections"];
+    
+    JsonObject collections_0 = collections[1];
+    const char* collection_date_char = collections[0]["date"];
+    char collection_date[11] = "";
+    strncpy(collection_date, collection_date_char, 10);
+    String collection_date_string = String(collection_date);
+    
+    const char* collection_types_0 = collections_0["roundTypes"][0]; // "RECYCLE"
+    const char* collection_types_1 = collections_0["roundTypes"][1];
+    
+    Serial.print("Collection date: ");
+    Serial.println(collection_date_string);
+
+    Serial.print("Tomorrow's date: ");
+    Serial.println(tomorrow_date);
+
+    Serial.print("Collection type 1: ");
+    Serial.println(collection_types_0);
+
+    Serial.print("Collection type 2: ");
+    Serial.println(collection_types_1);
+
+    if (tomorrow_date == collection_date_string) {
+      Serial.println("Collection tomorrow!");
+      uint32_t c1;
+      uint32_t c2;
+      c1 = get_colour_from_string(collection_types_0);
+      if (collection_types_1 == "") {
+        c2 = c1;
+        }
+      else {
+        c2 = get_colour_from_string(collection_types_1);
+        }
+      
+      while (button_pressed == 0) {
+        // blink
+        
+        blinking(c1, c2);
+        button_pressed = digitalRead(buttonPin);  // set to 0 when pressed
+        }
+      }
+
+
+    
+    // Serial.println(line); //Print response
+  }
+  Serial.println("==========");
+  Serial.println("closing connection");
+  }
+
+
+uint32_t get_colour_from_string(const char* bin_type) {
+  uint32_t c;
+  if (bin_type == "RECYCLE") {
+            c = bluePixel;}
+  if (bin_type == "DOMESTIC") {
+            c = yellowPixel;}
+  if (bin_type == "ORGANIC") {
+            c = greenPixel;}
+  return c;
+  }
+
+
+
 
 // toStringAddZero()
 // this function adds a zero to a date string if its a single digit
@@ -199,9 +342,10 @@ void turn_on(void (*func)()) {
   pixels.show();
   }
 
-void blinking(void (*func)()) {
+void blinking(uint32_t colour_1, uint32_t colour_2) {
   // give the function to turn on. delay and turn off are executed
-  turn_on(func);
+  set_half_and_half(colour_1, colour_2);
+  pixels.show();
   delay(DELAYVAL);
   turn_off();
   delay(DELAYVAL);
@@ -213,16 +357,16 @@ void solid_color(void (*func)()) {
 
 void blink_x_times(int a) {
   for(int i=0; i<a; i++) {
-    blinking(set_red);
+    blinking(redPixel, redPixel);
   }
   }
 
-void set_green_and_blue() {
+void set_half_and_half(const uint32_t colour_1, const uint32_t colour_2) {
   for(int i=0; i<NUMPIXELS; i++) {
     if(tophalf(i)) {
-      pixels.setPixelColor(i, greenPixel);
+      pixels.setPixelColor(i, colour_1);
       } else {
-        pixels.setPixelColor(i, bluePixel);
+        pixels.setPixelColor(i, colour_2);
       }
   }
   }
