@@ -29,7 +29,7 @@ int myTimeZone = 0; // change this to your time zone (see in timezone.h)
 const int daylightOffset_sec = -3600;  // daylight savings
 
 // parameters for time check
-const int delay_between_time_checks = 1000;       // milliseconds
+const int delay_between_time_checks = 15 * 60 * 1000;       // milliseconds
 const int scheduled_check_time = 15;      // 3pm
 const int max_time_to_blink_for = 10;                       // hours to blink for
 String last_date_of_check = "";   // Today or yesterday
@@ -158,8 +158,8 @@ void retrieve_time() {
   timeinfo = localtime(&now);
   String today_date = get_date_string(timeinfo);
   String today_time = get_time_string(timeinfo);
-  int current_hour = timeinfo->tm_sec;
-  tomorrow = now + 5 * 86400;       // add 24 x 60 x 60s
+  int current_hour = timeinfo->tm_hour;
+  tomorrow = now + 86400;       // add 24 x 60 x 60s
   timeinfo_tomorrow = localtime(&tomorrow);
   String tomorrow_date = get_date_string(timeinfo_tomorrow);
   
@@ -251,7 +251,7 @@ bool alert_function(String tomorrow_date) {
     JsonArray collections = doc["collections"];
     
     JsonObject collections_0 = collections[0];
-    const char* collection_date_char = collections[0]["date"];
+    const char* collection_date_char = collections_0["date"];
     char collection_date[11] = "";
     strncpy(collection_date, collection_date_char, 10);
     String collection_date_string = String(collection_date);
@@ -277,7 +277,7 @@ bool alert_function(String tomorrow_date) {
       uint32_t c2;
       c1 = get_colour_from_string(collection_types_0);
       
-      Serial.println("some error in this if statement because if empty string?");
+      // Serial.println("some error in this if statement because if empty string?");
       if (collection_types_1 == NULL || *collection_types_1 == 0) {
         c2 = c1;
         Serial.println("c1 = c2");
@@ -301,7 +301,14 @@ bool alert_function(String tomorrow_date) {
       button_pressed = 1;
       }
     else {
-      Serial.println("no collection tomorrow or no connection. returning not pressed.");
+      // Serial.println("no collection tomorrow or no connection. returning not pressed.");
+      if ((collection_date_string != NULL) && (collection_date_string != 0)) {
+        Serial.println("date is found but no collection tomorrow");
+        button_pressed = 1;
+        }
+      else {
+        Serial.println("no date found, check unsuccessfull");
+        }
       }
 
     
