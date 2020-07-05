@@ -30,7 +30,7 @@ const int daylightOffset_sec = -3600;  // daylight savings
 
 // parameters for time check
 const int delay_between_time_checks = 1000;       // milliseconds
-const int scheduled_check_time = 17;      // 5pm
+const int scheduled_check_time = 15;      // 3pm
 const int max_time_to_blink_for = 10;                       // hours to blink for
 String last_date_of_check = "";   // Today or yesterday
 
@@ -79,6 +79,7 @@ void setup() {
   // while wifi not connected yet, print '.'
   // then after it connected, get out of the loop
   Serial.print("Connecting");
+  
   while (WiFi.status() != WL_CONNECTED) {
      delay(500);
      Serial.print(".");
@@ -89,6 +90,7 @@ void setup() {
   Serial.println(ssid);
   // Print the IP address
   Serial.println(WiFi.localIP());
+  blink_x_times(1, greenPixel, greenPixel);
 
   // setup time
   configTime(myTimeZone, daylightOffset_sec, TIME_SERVER);
@@ -100,6 +102,7 @@ void setup() {
     delay(500);
     Serial.print("*");
   }
+  blink_x_times(3, greenPixel, greenPixel);
   Serial.print("\n");
 
   // setup button input
@@ -110,9 +113,9 @@ void loop() {
   // solid_color(set_red);
   // blinking(set_green_and_blue);
   // blink thrice
-  blink_x_times(2);
-  delay(delay_between_time_checks);
+  blink_x_times(2, whitePixel, whitePixel);
   retrieve_time();
+  delay(delay_between_time_checks);
 }
 
 
@@ -156,25 +159,26 @@ void retrieve_time() {
   String today_date = get_date_string(timeinfo);
   String today_time = get_time_string(timeinfo);
   int current_hour = timeinfo->tm_sec;
-  tomorrow = now + 86400;       // add 24 x 60 x 60s
+  tomorrow = now + 5 * 86400;       // add 24 x 60 x 60s
   timeinfo_tomorrow = localtime(&tomorrow);
   String tomorrow_date = get_date_string(timeinfo_tomorrow);
   
-  print_date_and_time(today_date, today_time, tomorrow_date);
+  // print_date_and_time(today_date, today_time, tomorrow_date);
   
   bool check_council_time = check_alert(scheduled_check_time, last_date_of_check, today_date, current_hour);
-  
+  bool bins_checked_and_alerted_successfully;
   if (check_council_time) {
     Serial.println("check bins with council now");
-    alert_function(tomorrow_date);
-    last_date_of_check = get_date_string(timeinfo);
-    Serial.println("always set to tomorrow for testing");
+    bins_checked_and_alerted_successfully = alert_function(tomorrow_date);
+    if (bins_checked_and_alerted_successfully) {
+      last_date_of_check = today_date;
+    }
     }
   }
 
 bool check_alert(int time_to_check, String last_check_date, String t_date, int hour) {
   bool time_to_alert = false;
-  Serial.println("date in func: " + t_date);
+  // Serial.println("date in func: " + t_date);
   if ((last_check_date != t_date) and (hour >= time_to_check)) {
     // Serial.println("Check Now! in function");
     time_to_alert = true;
@@ -182,12 +186,7 @@ bool check_alert(int time_to_check, String last_check_date, String t_date, int h
   return time_to_alert;
   }
 
-void alert_function(String tom_date) {
-  
-  read_from_council_website(tom_date);
-  }
-
-void read_from_council_website(String tomorrow_date) {
+bool alert_function(String tomorrow_date) {
   bool button_pressed = 0;
   WiFiClientSecure httpsClient;    //Declare object of class WiFiClient
  
@@ -198,7 +197,7 @@ void read_from_council_website(String tomorrow_date) {
   httpsClient.setTimeout(15000); // 15 Seconds
   delay(1000);
   
-  Serial.print("HTTPS Connecting");
+  Serial.println("HTTPS Connecting");
   int r=0; //retry counter
   while((!httpsClient.connect(host, httpsPort)) && (r < 30)){
       delay(100);
@@ -207,9 +206,11 @@ void read_from_council_website(String tomorrow_date) {
   }
   if(r==30) {
     Serial.println("Connection failed");
+    blink_x_times(5, redPixel, redPixel);
   }
   else {
     Serial.println("Connected to web");
+    blink_x_times(2, greenPixel, greenPixel);
   }
   
   String getData, Link;
@@ -275,27 +276,42 @@ void read_from_council_website(String tomorrow_date) {
       uint32_t c1;
       uint32_t c2;
       c1 = get_colour_from_string(collection_types_0);
-      if (collection_types_1 == "") {
+      
+      Serial.println("some error in this if statement because if empty string?");
+      if (collection_types_1 == NULL || *collection_types_1 == 0) {
         c2 = c1;
+        Serial.println("c1 = c2");
         }
       else {
+        Serial.println("getting new c2");
         c2 = get_colour_from_string(collection_types_1);
         }
+      Serial.println("colours retrieved");
       
       while (button_pressed == 0) {
         // blink
         
         blinking(c1, c2);
+        // Serial.println("before button read");
         button_pressed = digitalRead(buttonPin);  // set to 0 when pressed
+        
+        // Serial.println("after button read");
         }
+      Serial.println("button has been pressed");
+      button_pressed = 1;
       }
-
+    else {
+      Serial.println("no collection tomorrow or no connection. returning not pressed.");
+      }
 
     
     // Serial.println(line); //Print response
   }
   Serial.println("==========");
   Serial.println("closing connection");
+  Serial.print("button pressed returned = ");
+  Serial.println(button_pressed);
+  return button_pressed;
   }
 
 
@@ -358,11 +374,9 @@ void solid_color(void (*func)()) {
   turn_on(func);
   }
 
-void blink_x_times(int a) {
-  uint32_t red = redPixel;
-  uint32_t red2 = greenPixel;
+void blink_x_times(int a, uint32_t c1, uint32_t c2) {
   for(int i=0; i<a; i++) {
-    blinking(red, red2);
+    blinking(c1, c2);
   }
   }
 

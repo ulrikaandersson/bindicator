@@ -27,7 +27,7 @@ const char fingerprint[] PROGMEM = "65 10 73 1D 4A 19 D9 4C 39 DD AF DE F9 3A 7D
  
 void setup() {
   delay(1000);
-  Serial.begin(115200);
+  Serial.begin(9600);
   WiFi.mode(WIFI_OFF);        //Prevents reconnection issue (taking too long to connect)
   delay(1000);
   WiFi.mode(WIFI_STA);        //Only Station No AP, This line hides the viewing of ESP as wifi hotspot
