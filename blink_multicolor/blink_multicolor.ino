@@ -17,7 +17,8 @@ const char *host = "servicelayer3c.azure-api.net";
 const int httpsPort = 443;  //HTTPS= 443 and HTTP = 80
 
 //SHA1 finger print of certificate use web browser to view and copy
-const char fingerprint[] PROGMEM = "53 04 CC A4 A4 55 1E 0A 05 C2 6B 97 2C D3 08 A5 DF 33 78 2C";
+const char fingerprint[] PROGMEM = "DD 49 B8 6F E6 C2 CB 9B E2 AC 9A 73 FD 30 75 C1 01 19 35 A4";
+// "53 04 CC A4 A4 55 1E 0A 05 C2 6B 97 2C D3 08 A5 DF 33 78 2C";
 // "65 10 73 1D 4A 19 D9 4C 39 DD AF DE F9 3A 7D 15 20 E6 52 0D";
 
 
@@ -26,7 +27,7 @@ const char fingerprint[] PROGMEM = "53 04 CC A4 A4 55 1E 0A 05 C2 6B 97 2C D3 08
 #include "timezone.h"
 const char *TIME_SERVER = "pool.ntp.org";
 int myTimeZone = 0; // change this to your time zone (see in timezone.h)
-const int daylightOffset_sec = -3600;  // daylight savings
+const int daylightOffset_sec = 0; //-3600;  // daylight savings buggy so ignoring - doesn't matter if 1 hour off
 
 // parameters for time check
 const int delay_between_time_checks = 15 * 60 * 1000;       // milliseconds
@@ -103,7 +104,7 @@ void setup() {
     Serial.print("*");
   }
   blink_x_times(3, greenPixel, greenPixel);
-  Serial.print("\n");
+  Serial.println("Time found");
 
   // setup button input
   pinMode(buttonPin, INPUT);
@@ -163,7 +164,7 @@ void retrieve_time() {
   timeinfo_tomorrow = localtime(&tomorrow);
   String tomorrow_date = get_date_string(timeinfo_tomorrow);
   
-  // print_date_and_time(today_date, today_time, tomorrow_date);
+  print_date_and_time(today_date, today_time, tomorrow_date);
   
   bool check_council_time = check_alert(scheduled_check_time, last_date_of_check, today_date, current_hour);
   bool bins_checked_and_alerted_successfully;
@@ -173,6 +174,9 @@ void retrieve_time() {
     if (bins_checked_and_alerted_successfully) {
       last_date_of_check = today_date;
     }
+    }
+  else {
+    Serial.println("not time to check bins");
     }
   }
 
@@ -216,7 +220,8 @@ bool alert_function(String tomorrow_date) {
   String getData, Link;
  
   //GET Data
-  Link = "/wastecalendar/collection/search/200004185513/?numberOfCollections=12&fbclid=IwAR04JcYs5eiVkD-gK3EsKZg3G8qzMxp6_Mb6SJAxBadeTP9CdE8aTyz5UyY";
+  Link = "/wastecalendar/collection/search/200004185513/?numberOfCollections=12";
+  // &fbclid=IwAR04JcYs5eiVkD-gK3EsKZg3G8qzMxp6_Mb6SJAxBadeTP9CdE8aTyz5UyY";
  
   Serial.print("requesting URL: ");
   Serial.println(host+Link);
